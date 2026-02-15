@@ -7,6 +7,7 @@
 
 import dynamic from 'next/dynamic';
 import { HUD } from '@/components/hud/HUD';
+import { PointerLockPrompt } from '@/components/hud/PointerLockPrompt';
 import { MainMenu } from '@/components/menus/MainMenu';
 import { PauseMenu } from '@/components/menus/PauseMenu';
 import { useUIStore } from '@/store/uiStore';
@@ -64,6 +65,9 @@ export default function GamePage() {
 
       {/* HUD Overlay (only during gameplay) */}
       {isGameRunning && !isMainMenu && <HUD />}
+
+      {/* Pointer Lock Prompt */}
+      <PointerLockPrompt />
 
       {/* Menus */}
       <MainMenu />

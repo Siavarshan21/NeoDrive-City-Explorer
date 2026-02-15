@@ -35,6 +35,7 @@ class InputManager {
     window.addEventListener('mousedown', this.onMouseDown);
     window.addEventListener('mouseup', this.onMouseUp);
     document.addEventListener('pointerlockchange', this.onPointerLockChange);
+    document.addEventListener('pointerlockerror', this.onPointerLockError);
 
     this.initialized = true;
   }
@@ -49,6 +50,7 @@ class InputManager {
     window.removeEventListener('mousedown', this.onMouseDown);
     window.removeEventListener('mouseup', this.onMouseUp);
     document.removeEventListener('pointerlockchange', this.onPointerLockChange);
+    document.removeEventListener('pointerlockerror', this.onPointerLockError);
 
     this.initialized = false;
   }
@@ -73,7 +75,14 @@ class InputManager {
 
   /** Request pointer lock on the canvas element */
   requestPointerLock(element: HTMLElement) {
-    element.requestPointerLock();
+    try {
+      // Only request if document is focused and no existing lock
+      if (document.hasFocus() && !document.pointerLockElement) {
+        element.requestPointerLock();
+      }
+    } catch (err) {
+      console.warn('Failed to request pointer lock:', err);
+    }
   }
 
   /** Exit pointer lock */
@@ -115,6 +124,10 @@ class InputManager {
 
   private onPointerLockChange = () => {
     this.state.isPointerLocked = document.pointerLockElement !== null;
+  };
+
+  private onPointerLockError = () => {
+    console.warn('Pointer lock request failed. Click on the canvas when focused to enable mouse look.');
   };
 }
 
