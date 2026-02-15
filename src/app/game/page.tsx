@@ -13,7 +13,7 @@ import { PauseMenu } from '@/components/menus/PauseMenu';
 import { GameErrorBoundary } from '@/components/ui/GameErrorBoundary';
 import { useUIStore } from '@/store/uiStore';
 import { useGameStore } from '@/store/gameStore';
-import { useEffect } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { DAY_NIGHT } from '@/game/utils/constants';
 
 // Dynamic import for the 3D canvas to avoid SSR issues with Three.js
@@ -55,8 +55,7 @@ function DayNightCycle() {
     if (!isGameRunning || isPaused) return;
 
     const interval = setInterval(() => {
-      // Advance time: full cycle in DAY_NIGHT.CYCLE_DURATION seconds
-      const increment = (1 / DAY_NIGHT.CYCLE_DURATION) * 0.1; // 100ms interval
+      const increment = (1 / DAY_NIGHT.CYCLE_DURATION) * 0.1;
       setTimeOfDay(timeOfDay + increment);
     }, 100);
 
@@ -64,6 +63,77 @@ function DayNightCycle() {
   }, [isGameRunning, isPaused, timeOfDay, setTimeOfDay]);
 
   return null;
+}
+
+/** Debug overlay showing game state and key presses */
+function DebugPanel() {
+  const isGameRunning = useGameStore((s) => s.isGameRunning);
+  const isMainMenu = useUIStore((s) => s.isMainMenu);
+  const isPaused = useUIStore((s) => s.isPaused);
+  const playerPosition = useGameStore((s) => s.playerPosition);
+  const [pressedKeys, setPressedKeys] = useState<string[]>([]);
+  const [pointerLocked, setPointerLocked] = useState(false);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      setPressedKeys((prev) => {
+        if (prev.includes(e.code)) return prev;
+        return [...prev, e.code];
+      });
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
+      setPressedKeys((prev) => prev.filter((k) => k !== e.code));
+    };
+    const onPointerLock = () => {
+      setPointerLocked(document.pointerLockElement !== null);
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+    document.addEventListener('pointerlockchange', onPointerLock);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keyup', onKeyUp);
+      document.removeEventListener('pointerlockchange', onPointerLock);
+    };
+  }, []);
+
+  if (!isGameRunning) return null;
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        top: 8,
+        left: '50%',
+        transform: 'translateX(-50%)',
+        backgroundColor: 'rgba(0,0,0,0.85)',
+        border: '1px solid #00f0ff',
+        borderRadius: 6,
+        padding: '8px 16px',
+        fontFamily: 'monospace',
+        fontSize: 11,
+        color: '#ccc',
+        zIndex: 100,
+        display: 'flex',
+        gap: 16,
+        alignItems: 'center',
+      }}
+    >
+      <span style={{ color: isGameRunning ? '#0f0' : '#f00' }}>
+        Game: {isGameRunning ? 'ON' : 'OFF'}
+      </span>
+      <span>Menu: {isMainMenu ? 'YES' : 'NO'}</span>
+      <span>Paused: {isPaused ? 'YES' : 'NO'}</span>
+      <span>Lock: {pointerLocked ? 'YES' : 'NO'}</span>
+      <span>
+        Pos: ({playerPosition.x.toFixed(1)}, {playerPosition.z.toFixed(1)})
+      </span>
+      <span style={{ color: pressedKeys.length > 0 ? '#0f0' : '#666' }}>
+        Keys: {pressedKeys.length > 0 ? pressedKeys.join('+') : 'none'}
+      </span>
+    </div>
+  );
 }
 
 export default function GamePage() {
@@ -87,6 +157,9 @@ export default function GamePage() {
 
         {/* Pointer Lock Prompt */}
         <PointerLockPrompt />
+
+        {/* Debug Panel - shows game state and input */}
+        <DebugPanel />
 
         {/* Menus */}
         <MainMenu />
