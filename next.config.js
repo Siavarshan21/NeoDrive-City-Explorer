@@ -1,7 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   /* Enable static export for frontend-only deployment */
-  // output: 'export',
+  output: 'export',
+  images: {
+    unoptimized: true, // Required for static export
+  },
 
   /* Transpile Three.js ecosystem packages */
   transpilePackages: [

@@ -1,0 +1,6 @@
+[build]
+  command = "npm run build"
+  publish = "out"  # Next.js static export outputs to 'out' directory
+
+[build.environment]
+  NODE_VERSION = "18"
