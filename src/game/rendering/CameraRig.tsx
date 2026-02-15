@@ -2,7 +2,7 @@
 
 /**
  * CameraRig - Third-person camera that follows the player from behind.
- * Smooth camera movement with lerp interpolation.
+ * Reads store directly via getState() to avoid stale React closures.
  */
 
 import { useRef } from 'react';
@@ -12,9 +12,6 @@ import { useGameStore } from '@/store/gameStore';
 
 export function CameraRig() {
   const { camera } = useThree();
-  const playerPosition = useGameStore((s) => s.playerPosition);
-  const playerRotation = useGameStore((s) => s.playerRotation);
-  const isInVehicle = useGameStore((s) => s.isInVehicle);
 
   // Smooth camera interpolation
   const targetPos = useRef(new THREE.Vector3());
@@ -23,9 +20,9 @@ export function CameraRig() {
   const currentLookAt = useRef(new THREE.Vector3());
 
   useFrame((_, delta) => {
-    // Third-person camera (behind and above player)
-    // Vehicle mode: farther back
-    // On-foot mode: closer, higher angle
+    // Read directly from store each frame to avoid stale closures
+    const { playerPosition, playerRotation, isInVehicle } = useGameStore.getState();
+
     const distance = isInVehicle ? 12 : 8;
     const height = isInVehicle ? 5 : 4;
 
@@ -35,12 +32,11 @@ export function CameraRig() {
     targetPos.current.copy(playerPosition).add(offset);
 
     // Look-at point slightly ahead and above the player
-    const lookOffset = new THREE.Vector3(0, 1.5, 0);
-    targetLookAt.current.copy(playerPosition).add(lookOffset);
+    targetLookAt.current.set(playerPosition.x, playerPosition.y + 1.5, playerPosition.z);
 
-    // Smooth follow with lerp (adjust speed for smoothness)
-    const followSpeed = 8 * delta;
-    const lookSpeed = 10 * delta;
+    // Smooth follow with lerp
+    const followSpeed = Math.min(8 * delta, 1);
+    const lookSpeed = Math.min(10 * delta, 1);
 
     currentPos.current.lerp(targetPos.current, followSpeed);
     currentLookAt.current.lerp(targetLookAt.current, lookSpeed);

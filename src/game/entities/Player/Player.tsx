@@ -49,23 +49,20 @@ function PlaceholderPlayer() {
 export function Player() {
   const groupRef = useRef<THREE.Group>(null);
   const isInVehicle = useGameStore((s) => s.isInVehicle);
-  const enterVehicle = useGameStore((s) => s.enterVehicle);
-  const vehicles = useGameStore((s) => s.vehicles);
-  const isPaused = useUIStore((s) => s.isPaused);
-  const isMainMenu = useUIStore((s) => s.isMainMenu);
-  const setInteractionPrompt = useUIStore((s) => s.setInteractionPrompt);
-
-  const playerPosition = useGameStore((s) => s.playerPosition);
-  const playerRotation = useGameStore((s) => s.playerRotation);
 
   useFrame(() => {
+    // Read directly from store each frame to avoid stale closures
+    const { playerPosition, playerRotation, isInVehicle: inVehicle, vehicles, enterVehicle } = useGameStore.getState();
+    const { isPaused, isMainMenu, setInteractionPrompt } = useUIStore.getState();
+
     if (groupRef.current) {
       groupRef.current.position.copy(playerPosition);
-      groupRef.current.rotation.copy(playerRotation);
+      // Only apply yaw rotation to keep character upright
+      groupRef.current.rotation.set(0, playerRotation.y, 0);
     }
 
     // Check for nearby vehicles (enter/exit prompt)
-    if (isPaused || isMainMenu || isInVehicle) return;
+    if (isPaused || isMainMenu || inVehicle) return;
 
     let nearestVehicleDist = Infinity;
     let nearestVehicleId: string | null = null;
