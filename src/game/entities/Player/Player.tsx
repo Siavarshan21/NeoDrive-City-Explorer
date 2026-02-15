@@ -32,27 +32,24 @@ export function Player() {
   const isMainMenu = useUIStore((s) => s.isMainMenu);
   const setInteractionPrompt = useUIStore((s) => s.setInteractionPrompt);
 
-  useFrame((_, delta) => {
-    // Don't process player movement if paused or in menu
-    if (isPaused || isMainMenu || isInVehicle) return;
+  // Movement is now handled by DirectMovement in game/page.tsx
+  // This useFrame just syncs the mesh position with the store
+  const playerPosition = useGameStore((s) => s.playerPosition);
+  const playerRotation = useGameStore((s) => s.playerRotation);
 
-    const { position, rotation, speed } = controller.update(delta);
-
-    // Update store
-    setPlayerPosition(position);
-    setPlayerRotation(rotation);
-
-    // Update mesh transform
+  useFrame(() => {
     if (meshRef.current) {
-      meshRef.current.position.copy(position);
-      meshRef.current.rotation.copy(rotation);
+      meshRef.current.position.copy(playerPosition);
+      meshRef.current.rotation.copy(playerRotation);
     }
 
     // Check for nearby vehicles (enter/exit prompt)
+    if (isPaused || isMainMenu || isInVehicle) return;
+
     let nearestVehicleDist = Infinity;
     let nearestVehicleId: string | null = null;
     for (const v of vehicles) {
-      const dist = distanceXZ(position, v.position);
+      const dist = distanceXZ(playerPosition, v.position);
       if (dist < VEHICLE.ENTER_DISTANCE && dist < nearestVehicleDist) {
         nearestVehicleDist = dist;
         nearestVehicleId = v.id;

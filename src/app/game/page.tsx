@@ -6,6 +6,7 @@
  */
 
 import dynamic from 'next/dynamic';
+import * as THREE from 'three';
 import { HUD } from '@/components/hud/HUD';
 import { PointerLockPrompt } from '@/components/hud/PointerLockPrompt';
 import { MainMenu } from '@/components/menus/MainMenu';
@@ -13,8 +14,8 @@ import { PauseMenu } from '@/components/menus/PauseMenu';
 import { GameErrorBoundary } from '@/components/ui/GameErrorBoundary';
 import { useUIStore } from '@/store/uiStore';
 import { useGameStore } from '@/store/gameStore';
-import { useEffect, useState, useCallback } from 'react';
-import { DAY_NIGHT } from '@/game/utils/constants';
+import { useEffect, useRef, useState } from 'react';
+import { DAY_NIGHT, PLAYER } from '@/game/utils/constants';
 
 // Dynamic import for the 3D canvas to avoid SSR issues with Three.js
 const GameCanvas = dynamic(() => import('@/game/engine/GameCanvas'), {
@@ -61,6 +62,104 @@ function DayNightCycle() {
 
     return () => clearInterval(interval);
   }, [isGameRunning, isPaused, timeOfDay, setTimeOfDay]);
+
+  return null;
+}
+
+/**
+ * DirectMovement - Handles player movement entirely outside of Three.js/R3F.
+ * Uses setInterval + direct keyboard tracking to update the Zustand store.
+ * This ensures movement works even if useFrame inside Canvas is not running.
+ */
+function DirectMovement() {
+  const isGameRunning = useGameStore((s) => s.isGameRunning);
+  const isMainMenu = useUIStore((s) => s.isMainMenu);
+  const isPaused = useUIStore((s) => s.isPaused);
+  const isInVehicle = useGameStore((s) => s.isInVehicle);
+
+  const keysRef = useRef(new Set<string>());
+  const yawRef = useRef(0);
+  const pitchRef = useRef(0);
+  const posRef = useRef(new THREE.Vector3(0, 0, 0));
+
+  // Track keyboard input
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      keysRef.current.add(e.code);
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
+      keysRef.current.delete(e.code);
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keyup', onKeyUp);
+    };
+  }, []);
+
+  // Track mouse movement for camera rotation (when pointer locked)
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      if (document.pointerLockElement) {
+        yawRef.current -= e.movementX * PLAYER.MOUSE_SENSITIVITY;
+        pitchRef.current -= e.movementY * PLAYER.MOUSE_SENSITIVITY;
+        pitchRef.current = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, pitchRef.current));
+      }
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    return () => window.removeEventListener('mousemove', onMouseMove);
+  }, []);
+
+  // Main movement loop - runs at 60fps via setInterval
+  useEffect(() => {
+    if (!isGameRunning || isMainMenu || isPaused || isInVehicle) return;
+
+    const setPlayerPosition = useGameStore.getState().setPlayerPosition;
+    const setPlayerRotation = useGameStore.getState().setPlayerRotation;
+
+    const interval = setInterval(() => {
+      const keys = keysRef.current;
+      const dt = 1 / 60;
+
+      const isRunning = keys.has('ShiftLeft') || keys.has('ShiftRight');
+      const speed = isRunning ? PLAYER.RUN_SPEED : PLAYER.WALK_SPEED;
+
+      // Calculate forward/right vectors from yaw
+      const forward = new THREE.Vector3(
+        -Math.sin(yawRef.current),
+        0,
+        -Math.cos(yawRef.current)
+      );
+      const right = new THREE.Vector3(
+        Math.cos(yawRef.current),
+        0,
+        -Math.sin(yawRef.current)
+      );
+
+      const move = new THREE.Vector3(0, 0, 0);
+      if (keys.has('KeyW')) move.add(forward);
+      if (keys.has('KeyS')) move.sub(forward);
+      if (keys.has('KeyD')) move.add(right);
+      if (keys.has('KeyA')) move.sub(right);
+
+      if (move.lengthSq() > 0) {
+        move.normalize().multiplyScalar(speed * dt);
+        posRef.current.add(move);
+        posRef.current.y = 0;
+
+        setPlayerPosition(posRef.current.clone());
+      }
+
+      // Always update rotation (for mouse look)
+      const rotation = new THREE.Euler(pitchRef.current, yawRef.current, 0, 'YXZ');
+      setPlayerRotation(rotation);
+    }, 1000 / 60);
+
+    return () => clearInterval(interval);
+  }, [isGameRunning, isMainMenu, isPaused, isInVehicle]);
 
   return null;
 }
@@ -148,6 +247,9 @@ export default function GamePage() {
       >
         {/* 3D Game Canvas */}
         <GameCanvas />
+
+        {/* Direct movement system (outside Three.js) */}
+        <DirectMovement />
 
         {/* Day/Night cycle timer */}
         <DayNightCycle />
