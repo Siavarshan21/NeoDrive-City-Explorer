@@ -35,14 +35,25 @@ export default function GameCanvas() {
   const isGameRunning = useGameStore((s) => s.isGameRunning);
 
   useEffect(() => {
+    console.info('[GameCanvas] Initializing InputManager');
     inputManager.init();
-    return () => inputManager.dispose();
+    return () => {
+      console.info('[GameCanvas] Disposing InputManager');
+      inputManager.dispose();
+    };
   }, []);
+
+  useEffect(() => {
+    console.info('[GameCanvas] isGameRunning:', isGameRunning);
+  }, [isGameRunning]);
 
   if (!isGameRunning) return null;
 
   return (
-    <div className="absolute inset-0">
+    <div
+      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+      className="absolute inset-0"
+    >
       <Canvas
         shadows
         camera={{
@@ -55,6 +66,9 @@ export default function GameCanvas() {
           antialias: true,
           alpha: false,
           powerPreference: 'high-performance',
+        }}
+        onCreated={() => {
+          console.info('[GameCanvas] Three.js Canvas created successfully');
         }}
         onPointerDown={(e) => {
           // Lock pointer on click for FPS controls

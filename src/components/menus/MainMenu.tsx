@@ -98,12 +98,23 @@ export function MainMenu() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-neo-dark">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-neo-dark"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 50,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#0a0a1a',
+      }}
+    >
       {/* Background animation */}
-      <div className="absolute inset-0 overflow-hidden">
+      <div className="absolute inset-0 overflow-hidden" style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-neo-dark to-neo-dark" />
         {/* Animated grid lines */}
-        <div className="absolute inset-0 opacity-10">
+        <div className="absolute inset-0 opacity-10" style={{ position: 'absolute', inset: 0, opacity: 0.1 }}>
           <svg width="100%" height="100%">
             {Array.from({ length: 20 }, (_, i) => (
               <line
@@ -126,33 +137,81 @@ export function MainMenu() {
       </div>
 
       {/* Menu content */}
-      <div className="relative z-10 text-center">
+      <div className="relative z-10 text-center" style={{ position: 'relative', zIndex: 10, textAlign: 'center' }}>
         {/* Title */}
-        <div className="mb-12">
-          <h1 className="text-6xl font-bold font-mono text-neo-cyan mb-2 tracking-wider">
+        <div className="mb-12" style={{ marginBottom: 48 }}>
+          <h1
+            className="text-6xl font-bold font-mono text-neo-cyan mb-2 tracking-wider"
+            style={{ fontSize: 60, fontWeight: 'bold', fontFamily: 'monospace', color: '#00f0ff', marginBottom: 8, letterSpacing: '0.1em' }}
+          >
             NEOCITY
           </h1>
-          <h2 className="text-2xl font-mono text-neo-magenta tracking-widest">
+          <h2
+            className="text-2xl font-mono text-neo-magenta tracking-widest"
+            style={{ fontSize: 24, fontFamily: 'monospace', color: '#ff00e5', letterSpacing: '0.2em' }}
+          >
             EXPLORER
           </h2>
           <div className="mt-4 h-[1px] w-64 mx-auto bg-gradient-to-r from-transparent via-neo-cyan to-transparent" />
         </div>
 
         {/* Menu buttons */}
-        <div className="flex flex-col gap-4 items-center">
-          <Button size="lg" onClick={startNewGame} className="w-48">
+        <div className="flex flex-col gap-4 items-center" style={{ display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'center' }}>
+          <button
+            onClick={startNewGame}
+            style={{
+              width: 200,
+              padding: '14px 32px',
+              background: 'rgba(0,240,255,0.2)',
+              border: '2px solid #00f0ff',
+              color: '#00f0ff',
+              fontFamily: 'monospace',
+              fontSize: 16,
+              cursor: 'pointer',
+              borderRadius: 4,
+              letterSpacing: '0.1em',
+            }}
+          >
             NEW GAME
-          </Button>
-          <Button size="lg" variant="secondary" onClick={handleLoadGame} className="w-48">
+          </button>
+          <button
+            onClick={handleLoadGame}
+            style={{
+              width: 200,
+              padding: '14px 32px',
+              background: 'rgba(128,128,128,0.2)',
+              border: '1px solid #666',
+              color: '#ccc',
+              fontFamily: 'monospace',
+              fontSize: 16,
+              cursor: 'pointer',
+              borderRadius: 4,
+              letterSpacing: '0.1em',
+            }}
+          >
             LOAD GAME
-          </Button>
-          <Button size="lg" variant="secondary" onClick={() => setShowSettings(true)} className="w-48">
+          </button>
+          <button
+            onClick={() => setShowSettings(true)}
+            style={{
+              width: 200,
+              padding: '14px 32px',
+              background: 'rgba(128,128,128,0.2)',
+              border: '1px solid #666',
+              color: '#ccc',
+              fontFamily: 'monospace',
+              fontSize: 16,
+              cursor: 'pointer',
+              borderRadius: 4,
+              letterSpacing: '0.1em',
+            }}
+          >
             SETTINGS
-          </Button>
+          </button>
         </div>
 
         {/* Version info */}
-        <p className="mt-8 text-xs text-gray-600 font-mono">
+        <p className="mt-8 text-xs text-gray-600 font-mono" style={{ marginTop: 32, fontSize: 12, color: '#666', fontFamily: 'monospace' }}>
           v0.1.0 | Frontend Only | Three.js + Next.js
         </p>
       </div>
