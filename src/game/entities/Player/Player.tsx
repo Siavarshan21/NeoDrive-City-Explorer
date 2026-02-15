@@ -1,15 +1,14 @@
 'use client';
 
 /**
- * Player - 3D player entity rendered as a placeholder capsule.
- * In first-person mode, this is invisible (camera is at player eye level).
- * In third-person or debug mode, renders a simple character shape.
+ * Player - 3D player character using real GLB model.
+ * Visible in third-person mode, shows animated character.
  */
 
-import { useRef } from 'react';
+import { useRef, useMemo, Suspense } from 'react';
 import { useFrame } from '@react-three/fiber';
+import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
-import { PlayerController } from './PlayerController';
 import { useGameStore } from '@/store/gameStore';
 import { useUIStore } from '@/store/uiStore';
 import { inputManager } from '@/game/engine/InputManager';
@@ -17,30 +16,52 @@ import { KEYS, VEHICLE } from '@/game/utils/constants';
 import { distanceXZ } from '@/game/utils/math';
 import { playerConfig } from './playerConfig';
 
-// Singleton controller persists across re-renders
-const controller = new PlayerController();
+// Preload player model
+useGLTF.preload('/assets/models/cesium_man.glb');
+
+/** Real 3D player character model */
+function PlayerModel() {
+  const { scene } = useGLTF('/assets/models/cesium_man.glb');
+  const clonedScene = useMemo(() => {
+    const clone = scene.clone();
+    clone.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        child.castShadow = true;
+        child.receiveShadow = true;
+      }
+    });
+    return clone;
+  }, [scene]);
+
+  return <primitive object={clonedScene} scale={1.8} position={[0, 0, 0]} />;
+}
+
+/** Placeholder player (capsule fallback) */
+function PlaceholderPlayer() {
+  return (
+    <mesh castShadow position={[0, playerConfig.height / 2, 0]}>
+      <capsuleGeometry args={[playerConfig.radius, playerConfig.height - playerConfig.radius * 2, 8, 16]} />
+      <meshStandardMaterial color={playerConfig.color} emissive={playerConfig.color} emissiveIntensity={0.2} />
+    </mesh>
+  );
+}
 
 export function Player() {
-  const meshRef = useRef<THREE.Mesh>(null);
-  const setPlayerPosition = useGameStore((s) => s.setPlayerPosition);
-  const setPlayerRotation = useGameStore((s) => s.setPlayerRotation);
+  const groupRef = useRef<THREE.Group>(null);
   const isInVehicle = useGameStore((s) => s.isInVehicle);
   const enterVehicle = useGameStore((s) => s.enterVehicle);
-  const exitVehicle = useGameStore((s) => s.exitVehicle);
   const vehicles = useGameStore((s) => s.vehicles);
   const isPaused = useUIStore((s) => s.isPaused);
   const isMainMenu = useUIStore((s) => s.isMainMenu);
   const setInteractionPrompt = useUIStore((s) => s.setInteractionPrompt);
 
-  // Movement is now handled by DirectMovement in game/page.tsx
-  // This useFrame just syncs the mesh position with the store
   const playerPosition = useGameStore((s) => s.playerPosition);
   const playerRotation = useGameStore((s) => s.playerRotation);
 
   useFrame(() => {
-    if (meshRef.current) {
-      meshRef.current.position.copy(playerPosition);
-      meshRef.current.rotation.copy(playerRotation);
+    if (groupRef.current) {
+      groupRef.current.position.copy(playerPosition);
+      groupRef.current.rotation.copy(playerRotation);
     }
 
     // Check for nearby vehicles (enter/exit prompt)
@@ -66,16 +87,14 @@ export function Player() {
     }
   });
 
-  // When in vehicle, don't render player mesh
+  // When in vehicle, don't render player
   if (isInVehicle) return null;
 
   return (
-    <group>
-      {/* Player body - capsule placeholder */}
-      <mesh ref={meshRef} castShadow position={[0, playerConfig.height / 2, 0]}>
-        <capsuleGeometry args={[playerConfig.radius, playerConfig.height - playerConfig.radius * 2, 8, 16]} />
-        <meshStandardMaterial color={playerConfig.color} emissive={playerConfig.color} emissiveIntensity={0.2} />
-      </mesh>
+    <group ref={groupRef}>
+      <Suspense fallback={<PlaceholderPlayer />}>
+        <PlayerModel />
+      </Suspense>
     </group>
   );
 }
